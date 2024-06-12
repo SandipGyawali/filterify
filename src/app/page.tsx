@@ -1,113 +1,404 @@
-import Image from "next/image";
+"use client";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+import { QueryResult } from "@upstash/vector";
+import { SneakerProduct } from "@/db";
+import Product from "@/components/products/product";
+import ProductSkeleton from "@/components/products/skeleton";
+import { Button } from "@/components/ui/button";
+import {
+  AccordionItem,
+  AccordionContent,
+  Accordion,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  OPTIONS_SORT,
+  SUB_CATEGORIES,
+  COLOR_FILTERS,
+  SIZE_FILTERS,
+  PRICE_FILTERS,
+  minimumPrice,
+  maximumPrice,
+} from "@/data/index";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ProductState } from "@/lib/validators/products";
+import { Input } from "@/components/ui/input";
+import Link from "next/link";
 
+const num_range_default = [0, 100] as [number, number];
 export default function Home() {
+  const [filter, setFilter] = useState<ProductState>({
+    color: [],
+    sort: "none",
+    price: {
+      isCustom: false,
+      range: num_range_default,
+    },
+    size: ["L", "M", "S"],
+  });
+
+  const {
+    data: sneakerProducts,
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ["products"],
+    queryFn: async () => {
+      const res = await axios.post<QueryResult<SneakerProduct>[]>(
+        "http://localhost:3000/api/products",
+        {
+          filter: {
+            sort: filter.sort,
+            color: filter.color,
+            price: filter.price.range,
+            size: filter.size,
+          },
+        }
+      );
+
+      return res.data;
+    },
+  });
+
+  //submit the filter to get the product
+  const submitFilter = () => refetch();
+
+  useEffect(() => {
+    submitFilter();
+  }, [filter, submitFilter]);
+
+  //color filter for the checkbox option
+  const applyFilter = ({
+    category,
+    value,
+  }: {
+    category: keyof Omit<typeof filter, "price" | "sort">;
+    value: string;
+  }) => {
+    const filterApplied = filter[category].includes(value as never);
+
+    if (filterApplied) {
+      setFilter((prev) => ({
+        ...prev,
+        [category]: prev[category].filter((v) => v !== value),
+      }));
+    } else {
+      setFilter((prev) => ({
+        ...prev,
+        [category]: [...prev[category], value],
+      }));
+    }
+  };
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:size-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="flex items-baseline justify-between border-b border-gray-200 pb-6 pt-24">
+        <Link
+          href="/"
+          className="text-4xl font-bold tracking-tight dark:text-gray-200 text-gray-500"
+        >
+          Filterify
+        </Link>
+        <div className="flex items-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="default">Sort</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56 relative right-[78px]">
+              <DropdownMenuLabel>Options:</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuCheckboxItem
+                checked={filter.sort === "asc"}
+                onCheckedChange={() => {
+                  setFilter((prev) => ({
+                    ...prev,
+                    sort: "asc",
+                  }));
+                }}
+              >
+                Ascending
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={filter.sort === "desc"}
+                onCheckedChange={() => {
+                  setFilter((prev) => ({
+                    ...prev,
+                    sort: "desc",
+                  }));
+                }}
+              >
+                Descending
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={filter.sort === "none"}
+                onCheckedChange={() => {
+                  setFilter((prev) => ({
+                    ...prev,
+                    sort: "none",
+                  }));
+                }}
+              >
+                Normal
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-      <div className="relative z-[-1] flex place-items-center before:absolute before:h-[300px] before:w-full before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 sm:before:w-[480px] sm:after:w-[240px] before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
+      <section className="pb-24 pt-6">
+        <div className="grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-4">
+          {/* filters */}
+          <div className="hidden lg:block">
+            <ul className="space-y-4 border-b border-gray-200 pb-6 text-sm font-medium text-gray-900">
+              {SUB_CATEGORIES.map((category, index) => (
+                <li key={index}>
+                  <Button variant="link" disabled={!category.selected}>
+                    {category.name}
+                  </Button>
+                </li>
+              ))}
+            </ul>
 
-      <div className="mb-32 grid text-center lg:mb-0 lg:w-full lg:max-w-5xl lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
+            <Accordion type="multiple" className="animate-none">
+              {/* color filter */}
+              <AccordionItem value="color">
+                <AccordionTrigger className="py-3 px-3 text-sm dark:text-gray-300 text-gray-600">
+                  Color
+                </AccordionTrigger>
 
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
+                <AccordionContent className="pt-6 animate-none">
+                  <ul className="space-y-4 ml-4">
+                    {COLOR_FILTERS.options.map((color, index) => (
+                      <li key={index} className="flex items-center space-x-4">
+                        <Checkbox
+                          type="button"
+                          id={`color-${index}`}
+                          onClick={() => {
+                            console.log("Hello");
+                            applyFilter({
+                              category: "color",
+                              value: color.value,
+                            });
+                          }}
+                          checked={filter.color.includes(color.value)}
+                        />
+                        <label
+                          htmlFor={`color-${index}`}
+                          className="ml-3 text-sm text-gray-500 dark:text-gray-400 font-medium"
+                        >
+                          {color.label}
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
 
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Explore starter templates for Next.js.
-          </p>
-        </a>
+              {/* size filter */}
+              <AccordionItem value="size">
+                <AccordionTrigger className="py-3 px-3 text-sm dark:text-gray-300 text-gray-600">
+                  Size
+                </AccordionTrigger>
 
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-balance text-sm opacity-50">
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
+                <AccordionContent className="pt-6 animate-none">
+                  <ul className="space-y-4 ml-4">
+                    {SIZE_FILTERS.options.map((size, index) => (
+                      <li key={index} className="flex items-center space-x-4">
+                        <Checkbox
+                          type="button"
+                          id={`size-${index}`}
+                          onClick={() => {
+                            applyFilter({
+                              category: "size",
+                              value: size.value,
+                            });
+                          }}
+                          checked={filter.size.includes(size.value)}
+                        />
+                        <label
+                          htmlFor={`color-${index}`}
+                          className="ml-3 text-sm text-gray-500 dark:text-gray-400 font-medium"
+                        >
+                          {size.label}
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* price filter */}
+              <AccordionItem value="price">
+                <AccordionTrigger className="py-3 px-3 te text-sm dark:text-gray-300 text-gray-600">
+                  Price
+                </AccordionTrigger>
+
+                <AccordionContent className="pt-6 animate-none">
+                  <ul className="space-y-4 ml-4">
+                    {PRICE_FILTERS.options.map((price, index) => (
+                      <li key={index} className="flex items-center space-x-4">
+                        <Checkbox
+                          type="button"
+                          id={`price-${index}`}
+                          onClick={() => {
+                            setFilter((prev) => ({
+                              ...prev,
+                              price: {
+                                isCustom: false,
+                                range: [...price.value],
+                              },
+                            }));
+                          }}
+                          checked={
+                            !filter.price.isCustom &&
+                            filter.price.range[0] === price.value[0] &&
+                            filter.price.range[1] === price.value[1]
+                          }
+                        />
+                        <label
+                          htmlFor={`color-${index}`}
+                          className="ml-3 text-sm text-gray-500 dark:text-gray-400 font-medium"
+                        >
+                          {price.label}
+                        </label>
+                      </li>
+                    ))}
+                    <li className="flex justify-center flex-col gap-3">
+                      <div>
+                        <Checkbox
+                          type="button"
+                          id="price-filter-custom"
+                          onClick={() => {
+                            setFilter((prev) => ({
+                              ...prev,
+                              price: {
+                                isCustom: true,
+                                range: [0, 100],
+                              },
+                            }));
+                          }}
+                          checked={filter.price.isCustom}
+                        />
+                        <label className="ml-4 text-sm text-gray-500 dark:text-gray-400 font-medium">
+                          Custom
+                        </label>
+                      </div>
+
+                      <div className="flex justify-between mt-2">
+                        <p className="font-medium">Price</p>
+                        <div>
+                          {filter.price.isCustom
+                            ? minimumPrice(
+                                filter.price.range[0],
+                                filter.price.range[1]
+                              ).toFixed(0)
+                            : filter.price.range[0].toFixed(0)}{" "}
+                          $ -{" "}
+                          {filter.price.isCustom
+                            ? maximumPrice(
+                                filter.price.range[0],
+                                filter.price.range[1]
+                              ).toFixed(0)
+                            : filter.price.range[1].toFixed(0)}{" "}
+                          $
+                        </div>
+                      </div>
+
+                      <span className="text-xs mt-3 text-gray-300 font-medium">
+                        Filter Range:
+                      </span>
+                      <div className="flex items-center justify-center gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Min"
+                          min={0}
+                          max={100}
+                          onChange={(e) => {
+                            if (
+                              Number(e.target.value) > 100 ||
+                              Number(e.target.value) < 0
+                            )
+                              return;
+
+                            setFilter((prev) => ({
+                              ...prev,
+                              price: {
+                                isCustom: prev.price.isCustom,
+                                range: [
+                                  Number(e.target.value),
+                                  prev.price.range[1],
+                                ],
+                              },
+                            }));
+                          }}
+                          disabled={!filter.price.isCustom}
+                        />
+                        <Input
+                          type="number"
+                          placeholder="Max"
+                          min={0}
+                          max={100}
+                          onChange={(e) => {
+                            if (
+                              Number(e.target.value) > 100 ||
+                              Number(e.target.value) < 0
+                            )
+                              return;
+
+                            setFilter((prev) => ({
+                              ...prev,
+                              price: {
+                                isCustom: prev.price.isCustom,
+                                range: [
+                                  prev.price.range[0],
+                                  Number(e.target.value),
+                                ],
+                              },
+                            }));
+                          }}
+                          disabled={!filter.price.isCustom}
+                        />
+                      </div>
+                      <span className="text-red-500 text-xs dark:text-red-400">
+                        Note: Range cannot exceed from 0$ to 100$
+                      </span>
+                    </li>
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+
+          <ul className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+            {isLoading ? (
+              [1, 2, 3, 4, 5, 6].map((data, index) => (
+                <ProductSkeleton key={index} />
+              ))
+            ) : sneakerProducts?.length === 0 ? (
+              <div className="empty relative mx-auto">
+                <h1 className="text-xl font-bold">Product Not Found.</h1>
+              </div>
+            ) : (
+              sneakerProducts?.map((product, index) => (
+                <Product product={product.metadata} key={index} />
+              ))
+            )}
+          </ul>
+        </div>
+      </section>
     </main>
   );
 }
