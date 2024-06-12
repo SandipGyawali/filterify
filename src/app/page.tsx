@@ -71,6 +71,7 @@ export default function Home() {
 
       return res.data;
     },
+    retry: 4,
   });
 
   //submit the filter to get the product
