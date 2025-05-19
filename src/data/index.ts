@@ -2,9 +2,6 @@ import { SUB_CATEGORIES_TYPE, OPTIONS_SORT_TYPE } from "./interfaces";
 
 const SUB_CATEGORIES: SUB_CATEGORIES_TYPE[] = [
   { name: "Sneakers", selected: true, href: "#" },
-  { name: "Watches", selected: false, href: "#" },
-  { name: "T-Shirts", selected: false, href: "#" },
-  { name: "Perfumes", selected: false, href: "#" },
 ];
 
 const OPTIONS_SORT: OPTIONS_SORT_TYPE[] = [

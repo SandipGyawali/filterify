@@ -58,7 +58,7 @@ export default function Home() {
     queryKey: ["products"],
     queryFn: async () => {
       const res = await axios.post<QueryResult<SneakerProduct>[]>(
-        "http://localhost:3000/api/products",
+        "/api/products",
         {
           filter: {
             sort: filter.sort,
